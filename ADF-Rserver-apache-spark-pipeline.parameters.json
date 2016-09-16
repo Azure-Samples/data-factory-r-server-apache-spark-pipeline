@@ -1,0 +1,30 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "clusterLoginUserName": {
+            "value": "admin"
+        },
+        "clusterLoginPassword": {
+            "value": "GEN-PASSW)rd12"
+        },
+        "sshUserName": {
+            "value": "hdiuser"
+        },
+        "sshPassword": {
+            "value": "GEN-PASSW)rd12"
+        },
+        "clusterWorkerNodeCount": {
+            "value": 2  
+        },
+        "parameterStorageAccountName": {
+            "value": "<<TODO: Change this to private storage account that you created, that contains the dataset and scripts>>"
+        },
+        "parameterStorageAccountAccessKey": {
+            "value": "<<TODO: change this to the Access Keys for storage account specified :parameterStorageAccountName>>"
+        },
+        "parameterStorageContainerName": {
+            "value": "<<TODO: change this to the container name used on the private storage account for copying the dataset and scripts>>"
+        }
+    }
+}
