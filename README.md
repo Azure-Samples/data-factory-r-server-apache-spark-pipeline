@@ -21,10 +21,10 @@ There are three things that we should understand as we divulge into the details:
 ## Microsoft R:  
 Microsoft provides an enhanced implementation on top of Open-source R that allows benefits of distributed computing to flow into R. The Microsoft R implements several popular machine learning algorithms to make them more efficient and scalable over distributed computing frameworks.  Apache Spark is one of the supported distributing computing platforms for Microsoft R.  The use of Apache Spark allows us to do computations on datasets in R that do not fit onto the memory of a single machine. 
  
-The beauty of Microsoft R comes from the design that allows with a single line change (setting a suitable computing context) to switch the backend computing platform (from Hadoop to Apache Spark to local machine).  Rest of the code is agnostic and independent to the backend. We mainly use the functionality provided by the [RevoScaleR package](https://msdn.microsoft.com/en-us/microsoft-r/scaler-getting-started). More details on how to use R with Spark are here (https://blogs.msdn.microsoft.com/azuredatalake/2016/08/09/rapid-big-data-prototyping-with-microsoft-r-server-on-apache-spark-context-switching-spark-tuning/)
+The beauty of Microsoft R comes from the design that allows with a single line change (setting a suitable computing context) to switch the backend computing platform (from Hadoop to Apache Spark to local machine).  Rest of the code is agnostic and independent to the backend. We mainly use the functionality provided by the [RevoScaleR package](https://msdn.microsoft.com/en-us/microsoft-r/scaler-getting-started). More details on how to use R with Spark are in this [blog](https://blogs.msdn.microsoft.com/azuredatalake/2016/08/09/rapid-big-data-prototyping-with-microsoft-r-server-on-apache-spark-context-switching-spark-tuning/).
  
 ## Azure Data Factory (ADF):
-Data factory allows users to create data pipelines and orchestrates data movement. In simple words, allows users to specify dependencies between data and computational tasks and create a time-based data flow. The usefulness of using ADF comes from the fact that it provides several inbuilt tools for creating a pipeline (on demand clusters, ability to run custom jobs) and provides insights into each step of a running pipeline. The documentation here provides details on ADF: https://azure.microsoft.com/en-us/documentation/services/data-factory/ . Similar to other services offered by Azure, ADF also allows one-click deployment through [Azure Resource Manager Templates](https://azure.microsoft.com/en-us/documentation/articles/resource-group-authoring-templates/).  ADF also has support to run Hadoop/Spark cluster as a PAAS and can also integrate with existing HDInsight clusters among other compute platforms. A typical ADF instance comprises of pipelines and each pipeline can contain multiple activities. Each activity takes at least one input dataset, a compute linked services to process the input and produce at least one output dataset. A [compute linked service](https://azure.microsoft.com/en-us/documentation/articles/data-factory-compute-linked-services/) is a facility that allows connecting ADF to computer resources such Spark cluster or Azure Batch. 
+Data factory allows users to create data pipelines and orchestrates data movement. In simple words, allows users to specify dependencies between data and computational tasks and create a time-based data flow. The usefulness of using ADF comes from the fact that it provides several inbuilt tools for creating a pipeline (on demand clusters, ability to run custom jobs) and provides insights into each step of a running pipeline. The documentation [here](https://azure.microsoft.com/en-us/documentation/services/data-factory/) provides details on ADF  . Similar to other services offered by Azure, ADF also allows one-click deployment through [Azure Resource Manager Templates](https://azure.microsoft.com/en-us/documentation/articles/resource-group-authoring-templates/).  ADF also has support to run Hadoop/Spark cluster as a PAAS and can also integrate with existing HDInsight clusters among other compute platforms. A typical ADF instance comprises of pipelines and each pipeline can contain multiple activities. Each activity takes at least one input dataset, a compute linked services to process the input and produce at least one output dataset. A [compute linked service](https://azure.microsoft.com/en-us/documentation/articles/data-factory-compute-linked-services/) is a facility that allows connecting ADF to computer resources such Spark cluster or Azure Batch. 
 
 Currently, ADF only supports Map-reduce jobs (no customs jobs) on Linux HDI clusters and since Microsoft R runs only on Linux cluster, as a workaround, we will use a [custom task-runner](https://github.com/Azure/Azure-DataFactory/tree/master/Samples/CustomizedJavaOnHDInsight) masquerading as a map-reduce job to run Microsoft R.    
 
@@ -108,9 +108,9 @@ Following sequence of steps happens while running the R script:
 # Customizing the pipeline
  It’s possible to customize the template used in this post and apply it to other problems. There are three main parts that can be configured as per requirements: Cluster Configuration, R code that is used for the analysis, and the Data Factory setup.  Below we will give a high level idea on customizing each of these.
  
-1.	Cluster Configuration: We are using only two worker nodes of the D3_V2 types. For the jobs that require more memory or processing power, one can create more worker nodes and/or use more powerful machines. Changes in the cluster configuration should also be reflected in the R script when setting the compute context to allow for efficient resource utilization.  This post talks about Spark tuning with Microsoft R: https://blogs.msdn.microsoft.com/azuredatalake/2016/08/09/rapid-big-data-prototyping-with-microsoft-r-server-on-apache-spark-context-switching-spark-tuning/
- 
-```    {
+*	Cluster Configuration: We are using only two worker nodes of the D3_V2 types. For the jobs that require more memory or processing power, one can create more worker nodes and/or use more powerful machines. Changes in the cluster configuration should also be reflected in the R script when setting the compute context to allow for efficient resource utilization.  This post talks about Spark tuning with Microsoft R: https://blogs.msdn.microsoft.com/azuredatalake/2016/08/09/rapid-big-data-prototyping-with-microsoft-r-server-on-apache-spark-context-switching-spark-tuning/
+```    
+{
  		"name": "workernode",
                               "targetInstanceCount": "[parameters('clusterWorkerNodeCount')]",
 "hardwareProfile": {
@@ -122,17 +122,15 @@ Following sequence of steps happens while running the R script:
                    "password": "[parameters('sshPassword')]"
  }
 }
-…
 ```
-
 *Figure 2.* A code snippet from the ARM template showing the configuration of the worker nodes. 'targetInstanceCount' value decides the number of worker nodes (currently set to 'clusterWorkerNodeCount’ as set in the parameter file).The 'vmSize' decides the type of VM used for the worker nodes.
  
 
 
-2.	R script: One can replace/modify the current R script 'RScriptToRun.R' that is kept in the script folder among the files that were copied from the public repository.  For changing the name of the script file or modifying the arguments, changes must be edited in the 'ADFTutorialARM-Rserver-MapReduceRun.json' in the Data Pipeline section. Figure 2 shows the relevant section from the ARM template.
+*	R script: One can replace/modify the current R script 'RScriptToRun.R' that is kept in the script folder among the files that were copied from the public repository.  For changing the name of the script file or modifying the arguments, changes must be edited in the 'ADFTutorialARM-Rserver-MapReduceRun.json' in the Data Pipeline section. Figure 2 shows the relevant section from the ARM template.
 
 ```
-  "activities": [
+"activities": [
   {                             "type": "HDInsightMapReduce",
                                 "typeProperties": {
                                     "className": "com.adf.jobonhdi.JobOnHdiLauncher",
@@ -148,18 +146,17 @@ Following sequence of steps happens while running the R script:
                                               '/data/programmers.tsv/ /output/model \" ',variables('rscript-name'), ' /dev/stdout')]"
                                     ]
                                 },
-…
 ```
 
 *Figure 3.* A code snippet from the ARM template showing activity that runs the R script. The name of the script is stored in the variable – ‘rscript-name’. ‘/data/prgrammers.tsv’ and ‘/output/model’ are the arguments to the rscript   The script is run using batch mode provided by R. Note that we use command ‘Revo64’ instead of ‘R’ as we are referring to the R server provided by Microsoft.  
 
 
-3.	Data Factory: Currently the data factory is scheduled to run once a month; one can change that as per the requirements. We are currently having static dataset, but it can be changed to something where new data made accessible to the pipeline. ADF has support for reading partitions defined by time periods. ADF can also utilize data from different sources (including blob storage, databases, etc.).  One can add more activities (such as ETL in Apache Spark) to the pipeline or even create more pipelines. Documentation on [ADF](
+*	Data Factory: Currently the data factory is scheduled to run once a month; one can change that as per the requirements. We are currently having static dataset, but it can be changed to something where new data made accessible to the pipeline. ADF has support for reading partitions defined by time periods. ADF can also utilize data from different sources (including blob storage, databases, etc.).  One can add more activities (such as ETL in Apache Spark) to the pipeline or even create more pipelines. Documentation on [ADF](
 https://azure.microsoft.com/en-us/documentation/services/data-factory/) has more details 
 
 
 ```
-  "policy": {
+"policy": {
                                     "timeout": "00:30:00",
                                     "concurrency": 1,
                                     "retry": 1
