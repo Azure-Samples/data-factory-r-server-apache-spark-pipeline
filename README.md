@@ -31,7 +31,7 @@ Currently, ADF only supports Map-reduce jobs (no customs jobs) on Linux HDI clus
 ## Dataset:
 The 2013 [NYC dataset](http://www.andresmh.com/nyctaxitrips) in the available form has two csv files for Trips and Fares. For the predictive use, we process and join them as per the instruction in this [post](https://azure.microsoft.com/en-us/documentation/articles/machine-learning-data-science-process-hive-walkthrough).  <p>TODO: udayan will add more details <p> To speed up the demo, we are only using data from one of the months. One can take similar steps to run this demo code on larger datasets. 
 
-In the following sections, we provide steps to create an ADF pipeline with Microsoft R to for generating a machine learning model on the StackOverflow dataset.  
+In the following sections, we provide steps to create an ADF pipeline with Microsoft R to for generating a machine learning model on the NYC taxi dataset.  
 
 
 
