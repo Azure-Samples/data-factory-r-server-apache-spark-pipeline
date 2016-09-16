@@ -82,9 +82,9 @@ Azure allows deploying resources and configurations through [Azure Resource Mana
 3.	Select an Azure subscription
 
     **Select-AzureRmSubscription  -SubscriptionId ```<Subscription ID>```**
-4.	Using the Resource Group name used for creating the Storage Account, deploy the arm template 
+4.	Using the Resource Group name used for creating the Storage Account, deploy the arm template. The 'NameForTheDeployment' can be any string to identify the deployment
 
-    **New-AzureRmResourceGroupDeployment -Name <NameForTheDeployment> -ResourceGroupName <ResourceGroupName> -TemplateFile  .\ADF-Rserver-apache-spark-pipeline.template.json -TemplateParameterFile .\ADF-Rserver-apache-spark-pipeline.parameters.json**
+    **New-AzureRmResourceGroupDeployment -Name ```<NameForTheDeployment>``` -ResourceGroupName ```<ResourceGroupName>``` -TemplateFile  .\ADF-Rserver-apache-spark-pipeline.template.json -TemplateParameterFile .\ADF-Rserver-apache-spark-pipeline.parameters.json**
 5.	In case of error, you can debug the above command by running it again with '-Debug' switch
 6.	If everything goes well then go to the [Azure Portal](https://portal.azure.com), find the resource group and check if the ADF is running properly or not.  
 
