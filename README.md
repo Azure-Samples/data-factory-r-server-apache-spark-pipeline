@@ -1,3 +1,6 @@
+
+![Title Image](images/pipelineImage.PNG)
+
 # Introduction
 In this post, we highlight how to build a scalable machine learning-based data processing pipeline using [Microsoft R Server](https://www.microsoft.com/en-us/cloud-platform/r-server) with [Apache Spark](https://spark.apache.org/) utilizing [Azure Data Factory](https://azure.microsoft.com/en-us/documentation/articles/data-factory-introduction/) (ADF).  We provide step-by-step instructions and a customizable [Azure Resource Manager template](https://azure.microsoft.com/en-us/documentation/articles/resource-manager-template-walkthrough/) that provides one-click deployment of the entire solution.  
  
@@ -78,7 +81,7 @@ Azure allows deploying resources and configurations through [Azure Resource Mana
 
 3.	Select an Azure subscription
 
-    **Select-AzureRmSubscription  -SubscriptionId <Subscription ID>**
+    **Select-AzureRmSubscription  -SubscriptionId ```<Subscription ID>```**
 4.	Using the Resource Group name used for creating the Storage Account, deploy the arm template 
 
     **New-AzureRmResourceGroupDeployment -Name <NameForTheDeployment> -ResourceGroupName <ResourceGroupName> -TemplateFile  .\ADF-Rserver-apache-spark-pipeline.template.json -TemplateParameterFile .\ADF-Rserver-apache-spark-pipeline.parameters.json**
