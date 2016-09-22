@@ -99,7 +99,7 @@ Azure allows deploying resources and configurations through [Azure Resource Mana
     c.	Clicking on one of the runs, one can check the stdout and stderr messages from running the job. 
 
 2.	Check the container for the output file
-    a.	Look in the `/output/model/` folder of the attached container for a file named 'model'. This file contains the model object that can be used for prediction tasks.
+    a.	Look in the base folder of the attached container for a file named 'model'. This file contains the model object that can be used for prediction tasks.
 
 ## What is happening in the R script? 
 Following sequence of steps happens while running the R script:

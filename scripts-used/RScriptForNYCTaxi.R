@@ -107,5 +107,5 @@ runtime <- pt2-pt1;
 print (runtime/60)
 
 save(model, file=tempLocalModelFile)
-rxHadoopCopyFromLocal(tempLocalModelFile,ouptputFile)
+rxHadoopCopyFromLocal(tempLocalModelFile,outputFile)
 
