@@ -265,7 +265,7 @@
                                         "--files",
                                         "[concat('wasb://',parameters('parameterStorageContainerName'),'@', variables('storageAccountName'),'.blob.core.windows.net/scripts/com.adf.appsample.jar,',' wasb://',parameters('parameterStorageContainerName'),'@',variables('storageAccountName'),'.blob.core.windows.net/scripts/',variables('rscript-name'))]",
                                         "--command",
-                                        "[concat('source /usr/lib64/microsoft-r/8.0/hadoop/RevoHadoopEnvVars.site; Revo64 CMD BATCH \"--args ','/data/nyc_taxi_joined_tsv dummyVar \" ',variables('rscript-name'), ' /dev/stdout')]"
+                                        "[concat('source /usr/lib64/microsoft-r/8.0/hadoop/RevoHadoopEnvVars.site; Revo64 CMD BATCH \"--args ','/data/nyc_taxi_joined_csv /output/model/ \" ',variables('rscript-name'), ' /dev/stdout')]"
                                     ]
                                 },
                                 "inputs": [

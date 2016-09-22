@@ -86,6 +86,7 @@ Azure allows deploying resources and configurations through [Azure Resource Mana
 
     **New-AzureRmResourceGroupDeployment -Name ```<NameForTheDeployment>``` -ResourceGroupName ```<ResourceGroupName>``` -TemplateFile  .\ADF-Rserver-apache-spark-pipeline.template.json -TemplateParameterFile .\ADF-Rserver-apache-spark-pipeline.parameters.json**
 5.	In case of error, you can debug the above command by running it again with '-Debug' switch
+
 6.	If everything goes well then go to the [Azure Portal](https://portal.azure.com), find the resource group and check if the ADF is running properly or not.  
 
 
@@ -96,8 +97,9 @@ Azure allows deploying resources and configurations through [Azure Resource Mana
     b.	Click on the output - 'finalOutputDataset' and now you can check the status of the recent runs (based on the configuration this pipeline should run only once)
     
     c.	Clicking on one of the runs, one can check the stdout and stderr messages from running the job. 
+
 2.	Check the container for the output file
-    a.	<<Need to edit the Rscript to save the output>>
+    a.	Look in the `/output/model/` folder of the attached container for a file named 'model'. This file contains the model object that can be used for prediction tasks.
 
 ## What is happening in the R script? 
 Following sequence of steps happens while running the R script:
@@ -130,7 +132,7 @@ Following sequence of steps happens while running the R script:
  
 
 
-*	R script: One can replace/modify the current R script 'RScriptToRun.R' that is kept in the script folder among the files that were copied from the public repository.  For changing the name of the script file or modifying the arguments, changes must be edited in the 'ADFTutorialARM-Rserver-MapReduceRun.json' in the Data Pipeline section. Figure 2 shows the relevant section from the ARM template.
+*	R script: One can replace/modify the current R script 'RScriptForNYCTaxi.R' that is kept in the script folder among the files that were copied from the public repository.  For changing the name of the script file or modifying the arguments, changes must be edited in the 'ADF-Rserver-apache-spark-pipeline.template.json' in the Data Pipeline section. Figure 2 shows the relevant section from the ARM template.
 
 ```
 "activities": [
@@ -141,17 +143,17 @@ Following sequence of steps happens while running the R script:
                                     "jarLinkedService": "[variables('storageLinkedServiceName')]",
                                     "arguments": [
                                         "--files",  
-                                       "[concat('wasb://',parameters ('parameterStorageContainerName'),'@', variables('storageAccountName'),
+                                        "[concat('wasb://',parameters('parameterStorageContainerName'),'@', variables('storageAccountName'),
                                             '.blob.core.windows.net/scripts/com.adf.appsample.jar,',' wasb://',parameters('parameterStorageContainerName'),
-                                              '@',variables('storageAccountName'),'.blob.core.windows.net/scripts/RScriptToRun.R')]",
+                                            '@',variables('storageAccountName'),'.blob.core.windows.net/scripts/',variables('rscript-name'))]",
                                         "--command",
                                         "[concat('source /usr/lib64/microsoft-r/8.0/hadoop/RevoHadoopEnvVars.site; Revo64 CMD BATCH \"--args ',
-                                              '/data/programmers.tsv/ /output/model \" ',variables('rscript-name'), ' /dev/stdout')]"
+                                              '/data/nyc_taxi_joined_csv/ /output/model/ \" ',variables('rscript-name'), ' /dev/stdout')]"
                                     ]
                                 },
 ```
 
-*Figure 3.* A code snippet from the ARM template showing activity that runs the R script. The name of the script is stored in the variable – ‘rscript-name’. ‘/data/prgrammers.tsv’ and ‘/output/model’ are the arguments to the rscript   The script is run using batch mode provided by R. Note that we use command ‘Revo64’ instead of ‘R’ as we are referring to the R server provided by Microsoft.  
+*Figure 3.* A code snippet from the ARM template showing activity that runs the R script. The name of the script is stored in the variable – ‘rscript-name’. ‘/data/nyc_taxi_joined_csv/’ and ‘/output/model/’ are the arguments to the rscript   The script is run using batch mode provided by R. Note that we use command ‘Revo64’ instead of ‘R’ as we are referring to the R server provided by Microsoft.  
 
 
 *	Data Factory: Currently the data factory is scheduled to run once a month; one can change that as per the requirements. We are currently having static dataset, but it can be changed to something where new data made accessible to the pipeline. ADF has support for reading partitions defined by time periods. ADF can also utilize data from different sources (including blob storage, databases, etc.).  One can add more activities (such as ETL in Apache Spark) to the pipeline or even create more pipelines. Documentation on [ADF](
