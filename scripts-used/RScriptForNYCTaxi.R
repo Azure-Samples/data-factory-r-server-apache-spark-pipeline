@@ -3,25 +3,24 @@ args = (commandArgs(TRUE))
 
 if (length(args) < 2) {
     stop ("At least 2 argument must be supplied. 1st for the location of the 
-        dataset. 2nd for the output storage", call.=FALSE) 
+        dataset. 2nd is the directory on hdfs for the output model storage", call.=FALSE) 
 }
 
 # print the arguments for debugging purposes
-args
-
 # Set the spark context and define the executor memory and processor cores. 
 
-rxSetComputeContext(RxSpark(hdfsShareDir = "/tmp", consoleOutput=TRUE, executorMem="2g", executorCores = 2, driverMem="1g", executorOverheadMem="1g") )
 
 
-  filePrefix <- "/tmp/"
+  outputFile <- args[2]
+
   inputFile  <- args[1]
+  #name of the final model object
+  tempLocalModelFile <- 'model'
+  filePrefix <- "/tmp/"
+  rxSetComputeContext(RxSpark(hdfsShareDir = "/tmp", consoleOutput=TRUE, executorMem="2g", executorCores = 2, driverMem="1g", executorOverheadMem="1g") )
   hdfsFS <- RxHdfsFileSystem()
 
   
-
-
-
 
 
 xdfOutFile       <- file.path(filePrefix, "nyctaxixdf")
@@ -36,35 +35,34 @@ varsToDrop = c("medallion", "hack_license","store_and_fwd_flag",
                "pickup_datetime", "rate_code",
                "dropoff_datetime","pickup_longitude",
                "pickup_latitude", "dropoff_longitude",
-               "dropoff_latitude ", "direct_distance", "surcharge",
-               "mta_tax", "tolls_amount", "tip_class", "total_amount")
+               "dropoff_latitude ", "surcharge",
+               "mta_tax", "tolls_amount", "total_amount")
 
 
 
 taxiColClasses <- list(medallion = "character", hack_license = "character",
                        vendor_id =  "factor", rate_code = "factor",
-                       store_and_fwd_flag = "character", pickup_datetime = "character",
-                       dropoff_datetime = "character", pickup_hour = "numeric",
-                       pickup_week = "numeric", weekday = "numeric",
+                       store_and_fwd_flag = "character", dropoff_datetime = "character",
+                       pickup_datetime = "character", pickup_hour = "numeric",
+                       pickup_week = "numeric", pickup_weekday = "numeric",
                        passenger_count = "numeric", trip_time_in_secs = "numeric",
                        trip_distance = "numeric", pickup_longitude = "numeric",
                        pickup_latitude = "numeric", dropoff_longitude = "numeric",
-                       dropoff_latitude = "numeric", direct_distance = "numeric",
+                       dropoff_latitude = "numeric",
                        payment_type = "factor", fare_amount = "numeric",
                        surcharge = "numeric", mta_tax = "numeric", tip_amount = "numeric",
-                       tolls_amount = "numeric", total_amount = "numeric",
-                       tipped = "factor", tip_class = "factor")
+                       tolls_amount = "numeric", total_amount = "numeric")
 
 
 
 colInfo <- list()
 
-for (name in names(taxiColClasses)) 
+for (name in names(taxiColClasses))
   colInfo[[paste("V", length(colInfo)+1, sep = "")]] <- list(type = taxiColClasses[[name]], newName = name)
 
 
 
-taxiDS <- RxTextData(file = inputFile, fileSystem = hdfsFS, delimiter = "\x01", firstRowIsColNames = FALSE, 
+taxiDS <- RxTextData(file = inputFile, fileSystem = hdfsFS, delimiter = ",", firstRowIsColNames = FALSE,
                      colInfo = colInfo)
 
 
@@ -94,14 +92,20 @@ rxDataStep(inData = taxiDSXdf, outFile = taxiSplitXdf,
            overwrite = TRUE)
 
 
+
+
             
-# benchmark the model
+# run the training model
 
 pt1 <- proc.time()
 model <-  rxLinMod(tip_amount ~ fare_amount + vendor_id + pickup_hour + pickup_week + 
-                    weekday + passenger_count  + trip_time_in_secs + trip_distance + 
+                    pickup_weekday + passenger_count  + trip_time_in_secs + trip_distance + 
                     payment_type,data =taxiSplitXdf)
 
 pt2 <- proc.time()
 runtime <- pt2-pt1; 
 print (runtime/60)
+
+save(model, file=tempLocalModelFile)
+rxHadoopCopyFromLocal(tempLocalModelFile,ouptputFile)
+
