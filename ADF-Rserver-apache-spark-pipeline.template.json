@@ -54,17 +54,21 @@
     },
     "variables": {
         "apiVersion": "2015-10-01",
-        "blobInputDataset": "AzureBlobInput",
+        "blobInputDataset": "AzureBlobInputTraining",
+        "blobInputDatasetScoring": "AzureBlobInputScoring",
         "clusterName": "[toLower(concat('rspark', uniquestring(resourceGroup().id)))]",
         "clusterType": "spark",
         "clusterApiVersion": "2015-03-01-preview",
         "dataFactoryName": "[concat('DataFactory',uniquestring(resourceGroup().id))]",
-        "dataPipelineName" : "myfirstdatafactory",
+        "dataPipelineName" : "datafactorytraining",
+        "dataPipelineNamescoring" : "datafactoryscoring",
         "defaultApiVersion": "2015-05-01-preview",
-        "finalOutputDataset": "finalOutputDataset",
+        "finalOutputDataset": "finalOutputDatasetTraining",
+        "finalOutputDatasetScoring": "finalOutputDatasetScoring",
         "hdInsightOnDemandLinkedServiceName": "HDInsightOnDemandLinkedService",
         "publicStorageLinkedServiceName": "PublicDataSetAzureStorageLinkedService",
         "rscript-name": "RScriptForNYCTaxi.R",
+        "rscript-name-scoring": "RScriptForNYCTaxiScoring.R",
         "storageAccountName": "[parameters('parameterStorageAccountName')]",
         "storageLinkedServiceName": "AzureStorageLinkedService"         
     },
@@ -245,6 +249,49 @@
                 {
                     "dependsOn": [
                         "[concat('Microsoft.DataFactory/dataFactories/', variables('dataFactoryName'))]",
+                        "[concat('Microsoft.DataFactory/dataFactories/', variables('dataFactoryName'), '/linkedServices/', variables('storageLinkedServiceName'))]"
+                    ],
+                    "type": "datasets",
+                    "name": "[variables('blobInputDatasetScoring')]",
+                    "apiVersion": "[variables('apiVersion')]",
+                    "properties": {
+                        "published": false,
+                        "type": "AzureBlob",
+                        "linkedServiceName": "[variables('storageLinkedServiceName')]",
+                        "typeProperties": {
+                            "folderPath": "[concat(parameters('parameterStorageContainerName'),'/')]"
+                        },
+                        "availability": {
+                            "frequency": "Month",
+                            "interval": 1
+                        },
+                        "external": true
+                    }
+                },
+                {
+                    "dependsOn": [
+                        "[concat('Microsoft.DataFactory/dataFactories/', variables('dataFactoryName'))]",
+                        "[concat('Microsoft.DataFactory/dataFactories/', variables('dataFactoryName'), '/linkedServices/', variables('storageLinkedServiceName'))]"
+                    ],
+                    "type": "datasets",
+                    "name": "[variables('finalOutputDatasetScoring')]",
+                    "apiVersion": "[variables('apiVersion')]",
+                    "properties": {
+                        "published": false,
+                        "type": "AzureBlob",
+                        "linkedServiceName": "[variables('storageLinkedServiceName')]",
+                        "typeProperties": {
+                            "folderPath": "[parameters('parameterStorageContainerName')]"
+                        },
+                        "availability": {
+                            "frequency": "Month",
+                            "interval": 1
+                        }
+                    }
+                },
+                {
+                    "dependsOn": [
+                        "[concat('Microsoft.DataFactory/dataFactories/', variables('dataFactoryName'))]",
                         "[concat('Microsoft.DataFactory/dataFactories/', variables('dataFactoryName'), '/linkedServices/', variables('storageLinkedServiceName'))]",
                         "[concat('Microsoft.DataFactory/dataFactories/', variables('dataFactoryName'), '/linkedServices/', variables('hdInsightOnDemandLinkedServiceName'))]",
                         "[concat('Microsoft.DataFactory/dataFactories/', variables('dataFactoryName'), '/datasets/', variables('blobInputDataset'))]"
@@ -295,6 +342,60 @@
                         "start": "2016-04-01T00:00:00Z",
                         "end": "2016-04-02T00:00:00Z",
                         "isPaused": false
+                    }
+                },{
+                    "dependsOn": [
+                        "[concat('Microsoft.DataFactory/dataFactories/', variables('dataFactoryName'))]",
+                        "[concat('Microsoft.DataFactory/dataFactories/', variables('dataFactoryName'), '/linkedServices/', variables('storageLinkedServiceName'))]",
+                        "[concat('Microsoft.DataFactory/dataFactories/', variables('dataFactoryName'), '/linkedServices/', variables('hdInsightOnDemandLinkedServiceName'))]",
+                        "[concat('Microsoft.DataFactory/dataFactories/', variables('dataFactoryName'), '/datasets/', variables('blobInputDataset'))]"
+                    ],
+                    "type": "datapipelines",
+                    "name": "[variables('dataPipelineNameScoring')]",
+                    "apiVersion": "[variables('apiVersion')]",
+                    "properties": {
+                        "description": "My first Azure Data Factory pipeline",
+                        "activities": [
+                            {
+                                "type": "HDInsightMapReduce",
+                                "typeProperties": {
+                                    "className": "com.adf.jobonhdi.JobOnHdiLauncher",
+                                    "jarFilePath": "[concat(parameters('parameterStorageContainerName'),'/scripts/com.adf.adfjobonhdi.jar')]",
+                                    "jarLinkedService": "[variables('storageLinkedServiceName')]",
+                                    "arguments": [
+                                        "--files",
+                                        "[concat('wasb://',parameters('parameterStorageContainerName'),'@', variables('storageAccountName'),'.blob.core.windows.net/scripts/com.adf.appsample.jar,',' wasb://',parameters('parameterStorageContainerName'),'@',variables('storageAccountName'),'.blob.core.windows.net/scripts/',variables('rscript-name-scoring'))]",
+                                        "--command",
+                                        "[concat('source /usr/lib64/microsoft-r/8.0/hadoop/RevoHadoopEnvVars.site; Revo64 CMD BATCH \"--args ','/data/nyc_taxi_joined_csv_scoring /model tempOutput\" ',variables('rscript-name-scoring'), ' /dev/stdout')]"
+                                    ]
+                                },
+                                "inputs": [
+                                    {
+                                        "name": "[variables('blobInputDatasetScoring')]"
+                                    }
+                                ],
+                                "outputs": [
+                                    {
+                                        "name": "[variables('finalOutputDatasetScoring')]"
+                                    }
+                                ],
+                                "policy": {
+                                    "timeout": "00:30:00",
+                                    "concurrency": 1,
+                                    "retry": 1
+                                },
+                                "scheduler": {
+                                    "frequency": "Month",
+                                    "interval": 1
+                                },
+                                "name": "HDInsight Job Launcher",
+                                "description": "Submits a general HDInsight Job",
+                                "linkedServiceName": "[variables('hdInsightOnDemandLinkedServiceName')]"
+                            }
+                        ],
+                        "start": "2016-04-01T00:00:00Z",
+                        "end": "2016-04-02T00:00:00Z",
+                        "isPaused": true
                     }
                 }
             ]

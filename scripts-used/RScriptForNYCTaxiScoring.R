@@ -1,34 +1,64 @@
 # accept the arguments from command line
 args = (commandArgs(TRUE))
 
-if (length(args) < 2) {
-    stop ("At least 2 argument must be supplied. 1st for the location of the 
-        dataset. 2nd is the directory on hdfs for the output model storage", call.=FALSE) 
+if (length(args) < 3) {
+    stop ("At least 3 argument must be supplied. 1st for the location of the 
+        dataset. 2nd is the location of the model file on hdfs. 3rd is directory on hdfs for the output model storage", call.=TRUE) 
 }
 
 # print the arguments for debugging purposes
 # Set the spark context and define the executor memory and processor cores. 
 
 
+  #location for the prediction output file in the HDFS
+  outputFile <- args[3]
 
-  outputFile <- args[2]
+  #Location of the model file
 
+  modelFile <- args[2]
+
+  #dataset for testing
   inputFile  <- args[1]
   #name of the final model object
-  tempLocalModelFile <- 'model'
-  filePrefix <- "/tmp/"
-  rxSetComputeContext(RxSpark(hdfsShareDir = "/tmp", consoleOutput=TRUE, executorMem="2g", executorCores = 2, driverMem="1g", executorOverheadMem="1g") )
-  hdfsFS <- RxHdfsFileSystem()
 
   
+  filePrefix <- "/tmp/"
+  localFolderForTestingModel <-'testingModel'
+  rxSetComputeContext(RxSpark(hdfsShareDir = "/tmp", consoleOutput=TRUE, executorMem="2g", executorCores = 2, driverMem="1g", executorOverheadMem="1g") )
+  hdfsFS <- RxHdfsFileSystem()
+  
+  #extract the filename
+  strsplit(modelFile,'/')->modelPathSplit
+  modelFileName <-  modelPathSplit[[1]] [length(modelPathSplit[[1]])]
 
+  #check if the model file exists on hdfs 
+  if (rxHadoopFileExists(modelFile) == FALSE) {
+    stop (paste("Model file not found at location: ", modelFile, sep = ' ') , call.=TRUE) 
+  }
+
+  localModelFileWithPath =  paste(localFolderForTestingModel,modelFileName, sep = "/")
+
+  #copy model file locally after removing the existing file 
+  if (file.exists(localModelFileWithPath)==TRUE) {
+      file.remove(localModelFileWithPath)
+  }
+  
+  #create local folder (this gets ignored if folder exists)
+dir.create(localFolderForTestingModel, showWarnings = FALSE)
+
+modelFile
+localModelFileWithPath
+# copy the model to this location
+rxHadoopCopyToLocal(modelFile,localModelFileWithPath)
+
+# load the model into an object named - model 
+load(localModelFileWithPath)
 
 xdfOutFile       <- file.path(filePrefix, "nyctaxixdf")
 taxiSplitXdfFile <- file.path(filePrefix, "taxiSplitXdf")
 taxiTrainXdfFile <- file.path(filePrefix, "taxiTrainXdf")
 taxiTestXdfFile  <- file.path(filePrefix, "taxiTestXdf")
-predictionFile   <- file.path(filePrefix, "predictedRF")
-
+stackSplitXdf <- RxXdfData(file = outputFile, fileSystem = hdfsFS);
 
 
 varsToDrop = c("medallion", "hack_license","store_and_fwd_flag",
@@ -92,18 +122,10 @@ rxDataStep(inData = taxiDSXdf, outFile = taxiSplitXdf,
 # run the training model
 
 pt1 <- proc.time()
-model <-  rxLinMod(tip_amount ~ fare_amount + vendor_id + pickup_hour + pickup_week + 
-                    pickup_weekday + passenger_count  + trip_time_in_secs + trip_distance + 
-                    payment_type,data =taxiSplitXdf)
+#rxPredict(model, data =taxiSplitXdf, outData=stackSplitXdf, checkFactorLevels=FALSE )
+rxPredict(model, data =taxiSplitXdf,checkFactorLevels=FALSE )
 
 pt2 <- proc.time()
 runtime <- pt2-pt1; 
 print (runtime/60)
-
-#remove existing file 
-rxHadoopRemove(paste(outputFile,tempLocalModelFile, sep=''))
-
-save(model, file=tempLocalModelFile)
-rxHadoopCopyFromLocal(tempLocalModelFile,outputFile)
-
 

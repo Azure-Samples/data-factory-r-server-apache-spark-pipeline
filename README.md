@@ -6,7 +6,7 @@ In this post, we highlight how to build a scalable machine learning-based data p
  
 A data pipeline with Microsoft R makes sense when one uses R for processing large datasets at regular intervals. For e.g., running a stock market analysis model at the end of each business day or re-training/updating the predictive models every hour based on the new incoming labeled data. If there is a need for an ETL (Extraction, Transformation, and Load) step before the data reaches R, such an ETL step can also be added to the same pipeline as a dependency to the R task. This removes the need for synchronization as R task will wait on the dependencies to finish.
  
-As an example dataset for this post, we use open source data from [NYC Taxi Dataset](http://www.andresmh.com/nyctaxitrips), public NYC Taxi Trip and Fare data-set. This dataset contains details on each taxi trip inclusing pick-up/drop-off location, fare, tip paid, etc. Using this data, we want to train a predictive model to predict the tip amount on each ride. We imagine, in the case of NY taxi, that the new trip and fare data is collected everyday and we want to regularly update our predictive model to incorporate the latest trends. We will build a pipeline that periodically reads the new data and runs it through R to create a new and updated predictive model.
+As an example dataset for this post, we use open source data from [NYC Taxi Dataset](http://www.andresmh.com/nyctaxitrips), public NYC Taxi Trip and Fare data-set. This dataset contains details on each taxi trip including pick-up/drop-off location, fare, tip paid, etc. Using this data, we want to train a predictive model to predict the tip amount on each ride. We imagine, in the case of NY taxi, that the new trip and fare data is collected every day and we want to regularly update our predictive model to incorporate the latest trends. We will build a pipeline that periodically reads the new data and runs it through R to create a new and updated predictive model. We also create a batch scoring pipeline that uses the model created during the training and predicts the outcome (tip amount) for the given rides.  
  
 The post emphasizes on how we can build a pipeline using Azure Data factory with Microsoft R over Apache Spark to schedule data processing jobs. We want to give readers a usable example that can be modified for their datasets and use-cases. For the sake of simplicity, we have skipped tuning and validation of our machine learning model.  
  
@@ -24,7 +24,7 @@ There are three things that we should understand as we divulge into the details:
 ## Microsoft R:  
 Microsoft provides an enhanced implementation on top of Open-source R that allows benefits of distributed computing to flow into R. The Microsoft R implements several popular machine learning algorithms to make them more efficient and scalable over distributed computing frameworks.  Apache Spark is one of the supported distributing computing platforms for Microsoft R.  The use of Apache Spark allows us to do computations on datasets in R that do not fit onto the memory of a single machine. 
  
-The beauty of Microsoft R comes from the design that allows with a single line change (setting a suitable computing context) to switch the backend computing platform (from Hadoop to Apache Spark to local machine).  Rest of the code is agnostic and independent to the backend. We mainly use the functionality provided by the [RevoScaleR package](https://msdn.microsoft.com/en-us/microsoft-r/scaler-getting-started). More details on how to use R with Spark are in this [blog](https://blogs.msdn.microsoft.com/azuredatalake/2016/08/09/rapid-big-data-prototyping-with-microsoft-r-server-on-apache-spark-context-switching-spark-tuning/).
+The beauty of Microsoft R comes from the design that allows with a single line change (setting a suitable computing context) to switch the backend computing platform (from Hadoop to Apache Spark to local machine).  Rest of the code is agnostic and independent to the backend. We mainly use the functionality provided by the [RevoScaleR package](https://msdn.microsoft.com/en-us/microsoft-r/scaler-getting-started). More details on how to use R with Spark are on this [blog](https://blogs.msdn.microsoft.com/azuredatalake/2016/08/09/rapid-big-data-prototyping-with-microsoft-r-server-on-apache-spark-context-switching-spark-tuning/).
  
 ## Azure Data Factory (ADF):
 Data factory allows users to create data pipelines and orchestrates data movement. In simple words, allows users to specify dependencies between data and computational tasks and create a time-based data flow. The usefulness of using ADF comes from the fact that it provides several inbuilt tools for creating a pipeline (on demand clusters, ability to run custom jobs) and provides insights into each step of a running pipeline. The documentation [here](https://azure.microsoft.com/en-us/documentation/services/data-factory/) provides details on ADF  . Similar to other services offered by Azure, ADF also allows one-click deployment through [Azure Resource Manager Templates](https://azure.microsoft.com/en-us/documentation/articles/resource-group-authoring-templates/).  ADF also has support to run Hadoop/Spark cluster as a PAAS and can also integrate with existing HDInsight clusters among other compute platforms. A typical ADF instance comprises of pipelines and each pipeline can contain multiple activities. Each activity takes at least one input dataset, a compute linked services to process the input and produce at least one output dataset. A [compute linked service](https://azure.microsoft.com/en-us/documentation/articles/data-factory-compute-linked-services/) is a facility that allows connecting ADF to computer resources such Spark cluster or Azure Batch. 
@@ -92,21 +92,32 @@ Azure allows deploying resources and configurations through [Azure Resource Mana
 
 ## Expectations:
 1.	Check the pipeline run in the diagram view
-    a.	Find the Data Factory pipeline and click on the 'Diagram' view. You should be able to see the pipeline with input and output datasets.
+
+    a.	Find the Data Factory pipeline and click on the `Diagram` view. You should be able to see two pipelines (training and scoring) with input and output datasets.
     
-    b.	Click on the output - 'finalOutputDataset' and now you can check the status of the recent runs (based on the configuration this pipeline should run only once)
+    b.	Click on the output - `finalOutputDatasetTraining` and now you can check the status of the recent runs for the training pipeline (based on the configuration this pipeline should run only once)
     
     c.	Clicking on one of the runs, one can check the stdout and stderr messages from running the job. 
+  
+    d. If the status is `Succeeded`, then the attached storage container has a file named 'model'. This file contains the model object that can be used for prediction tasks. Now we can start the scoring pipeline
 
-2.	Check the container for the output file
-    a.	Look in the base folder of the attached container for a file named 'model'. This file contains the model object that can be used for prediction tasks.
+2.	Start the scoring pipeline
 
-## What is happening in the R script? 
-Following sequence of steps happens while running the R script:
+    a. By default, the scoring pipeline is set to pause. This is because it needs the 'model' file, which is generated upon the first run of the training pipeline. And since the scoring pipeline's running frequency is independent of the training pipeline, we have not added any dependencies between them. Therefore, the scoring pipeline is paused and we manually start it when the 'model' file is available.  
+
+    b. To start the scoring pipeline, we need to change a config parameter for that pipeline through [portal](https://portal.azure.com). Find the Data Factory that we created earlier and click - `Author and Deploy`, then expand `Pipelines` and click on `datafactoryscoring` pipeline. Towards the bottom, there is a key - `isPaused`, change the value for this key from `true` to `false`. Now click on `Deploy` button to activate these changes.
+
+    c. Now go back to the `Diagram` view and click the `finalOutputDatasetScoring` dataset, check the runs, if they have still not started, you can manually start the run (generally it take a moment before the pipeline starts). Now once the run is complete, similar to the training pipeline, one can check the 
+
+
+## Sequnce of steps in the R script for training 
+
+Following sequence of steps happens while running the training  R script:
+
 1.	Set the context for the Apache Spark: number of executors and amount of memory per executor. This configuration is dependent on both the task and the setup of the Spark cluster. 
 2.	Read the dataset and convert input dataset to XDF format
 3.	Read the dataset in XDF format, create new features and drop duplicate or unimportant fields 
-4.	Run linear regression Algorithm 
+4.	Run Linear-Regression algorithm 
 5.	Save the model 
 
 
@@ -132,7 +143,7 @@ Following sequence of steps happens while running the R script:
  
 
 
-*	R script: One can replace/modify the current R script 'RScriptForNYCTaxi.R' that is kept in the script folder among the files that were copied from the public repository.  For changing the name of the script file or modifying the arguments, changes must be edited in the 'ADF-Rserver-apache-spark-pipeline.template.json' in the Data Pipeline section. Figure 2 shows the relevant section from the ARM template.
+*	R script: One can replace/modify the R scripts too, for example in the training pipeline, we run `RScriptForNYCTaxi.R`. This script is kept in the script folder among the files that were copied from the public repository.  For changing the name of the script file or modifying the arguments, changes must be edited in the `ADF-Rserver-apache-spark-pipeline.template.json` in the Data Pipeline section. Figure 2 shows the relevant section from the ARM template.
 
 ```
 "activities": [
@@ -148,7 +159,6 @@ Following sequence of steps happens while running the R script:
                                             '@',variables('storageAccountName'),'.blob.core.windows.net/scripts/',variables('rscript-name'))]",
                                         "--command",
                                         "[concat('source /usr/lib64/microsoft-r/8.0/hadoop/RevoHadoopEnvVars.site; Revo64 CMD BATCH \"--args ',
-                                              '/data/nyc_taxi_joined_csv/ /output/model/ \" ',variables('rscript-name'), ' /dev/stdout')]"
                                     ]
                                 },
 ```
