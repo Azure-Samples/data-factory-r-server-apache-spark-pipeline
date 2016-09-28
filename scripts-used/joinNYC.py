@@ -1,5 +1,7 @@
-#spark-submit --master yarn --deploy-mode cluster --packages com.databricks:spark-csv_2.10:1.4.0 script.py wasb://udayanrservertest@removethisstoragename.blob.core.windows.net/beer.stackexchange.com/stackoverflowPosts.tsv wasb://udayanrservertest@removethisstoragename.blob.core.windows.net/beer.stackexchange.com/stackoverflowUsers.tsv stackoverflow.tsv
-
+# Use the following command to run this code on spark cluster running over yarn
+# spark-submit --master yarn --deploy-mode cluster --packages com.databricks:spark-csv_2.10:1.4.0 script.py \ 
+# wasb://<containerName>@<storageAccount>.blob.core.windows.net/<path to the csv trip dataset> \ 
+# wasb://<containerName>@<storageAccount>.blob.core.windows.net/<path to the csv fare dataset>  
 from pyspark.sql.types import *;from pyspark.sql.functions import *
 from pyspark import SparkConf
 from pyspark import SparkContext
@@ -21,19 +23,42 @@ if __name__ == "__main__":
 
 
 
-        CustomSchemaTripData = StructType([StructField("medallion",StringType(),True),StructField("hack_license",StringType(),True),StructField("vendor_id",StringType(),True),StructField("rate_code",StringType(),True),StructField("store_and_fwd_flag",StringType(),True),StructField("pickup_datetime",StringType(),True),StructField("dropoff_datetime",StringType(),True),StructField("passenger_count",IntegerType(),True),StructField("trip_time_in_secs",DoubleType(),True),StructField("trip_distance",DoubleType(),True),StructField("pickup_longitude",DoubleType(),True),StructField("pickup_latitude",DoubleType(),True),StructField("dropoff_longitude",DoubleType(),True),StructField("dropoff_latitude",DoubleType(),True)])
+        CustomSchemaTripData = StructType([StructField("medallion",StringType(),True),
+            StructField("hack_license",StringType(),True),
+            StructField("vendor_id",StringType(),True),
+            StructField("rate_code",StringType(),True),
+            StructField("store_and_fwd_flag",StringType(),True),
+            StructField("pickup_datetime",StringType(),True),
+            StructField("dropoff_datetime",StringType(),True),
+            StructField("passenger_count",IntegerType(),True),
+            StructField("trip_time_in_secs",DoubleType(),True),
+            StructField("trip_distance",DoubleType(),True),
+            StructField("pickup_longitude",DoubleType(),True),
+            StructField("pickup_latitude",DoubleType(),True),
+            StructField("dropoff_longitude",DoubleType(),True),
+            StructField("dropoff_latitude",DoubleType(),True)])
 
-        tripDf = sqlContext.read.format('com.databricks.spark.csv').options(header="true",delimiter=',',dateFormat="yyyy-MM-dd'T'HH:mm:ss.SSS").load(args.tripData, schema=CustomSchemaTripData)
+        tripDf = sqlContext.read.format('com.databricks.spark.csv').options(header="true",
+            delimiter=',',dateFormat="yyyy-MM-dd'T'HH:mm:ss.SSS").load(args.tripData, schema=CustomSchemaTripData)
 
-        #'wasb://udayanrservertest@removethisstoragename.blob.core.windows.net/beer.stackexchange.com/stackoverflowPosts.tsv', schema=CustomSchemaPosts)
 
         tripDf.registerTempTable('T')
 
-        CustomSchemaFares = StructType([StructField("medallion",StringType(),True),StructField("hack_license",StringType(),True),StructField("vendor_id",StringType(),True),StructField("pickup_datetime",StringType(),True),StructField("payment_type",StringType(),True),StructField("fare_amount",DoubleType(),True),StructField("surcharge",DoubleType(),True),StructField("mta_tax",DoubleType(),True),StructField("tip_amount",DoubleType(),True),StructField("tolls_amount",DoubleType(),True),StructField("total_amount",DoubleType(),True)])
+        CustomSchemaFares = StructType([StructField("medallion",StringType(),True),
+            StructField("hack_license",StringType(),True),
+            StructField("vendor_id",StringType(),True),
+            StructField("pickup_datetime",StringType(),True),
+            StructField("payment_type",StringType(),True),
+            StructField("fare_amount",DoubleType(),True),
+            StructField("surcharge",DoubleType(),True),
+            StructField("mta_tax",DoubleType(),True),
+            StructField("tip_amount",DoubleType(),True),
+            StructField("tolls_amount",DoubleType(),True),
+            StructField("total_amount",DoubleType(),True)])
 
 
-        faresDf = sqlContext.read.format('com.databricks.spark.csv').options(header="true",delimiter=',',dateFormat="yyyy-MM-dd'T'HH:mm:ss.SSS").load(args.tripFare, schema=CustomSchemaFares)
-        #'wasb://udayanrservertest@removethisstoragename.blob.core.windows.net/beer.stackexchange.com/stackoverflowUsers.tsv', schema=CustomSchemaUsers)
+        faresDf = sqlContext.read.format('com.databricks.spark.csv').options(header="true",
+            delimiter=',',dateFormat="yyyy-MM-dd'T'HH:mm:ss.SSS").load(args.tripFare, schema=CustomSchemaFares)
 
         faresDf.registerTempTable('F')
 
@@ -66,5 +91,6 @@ if __name__ == "__main__":
 
 
         print final.count()
-        final.write.format('com.databricks.spark.csv').mode('overwrite').options(header="true",delimiter=',',dateFormat="yyyy-MM-dd'T'HH:mm:ss.SSS").save(args.outputCSVFile)
+        final.write.format('com.databricks.spark.csv').mode('overwrite').options(header="true",
+            delimiter=',',dateFormat="yyyy-MM-dd'T'HH:mm:ss.SSS").save(args.outputCSVFile)
 
