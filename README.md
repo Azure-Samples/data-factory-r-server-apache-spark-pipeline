@@ -2,15 +2,15 @@
 ![Title Image](images/pipelineImage.PNG)
 
 # Introduction
-In this post, we highlight how to build a scalable machine learning-based data processing pipeline using [Microsoft R Server](https://www.microsoft.com/en-us/cloud-platform/r-server) with [Apache Spark](https://spark.apache.org/) utilizing [Azure Data Factory](https://azure.microsoft.com/en-us/documentation/articles/data-factory-introduction/) (ADF).  We provide step-by-step instructions and a customizable [Azure Resource Manager template](https://azure.microsoft.com/en-us/documentation/articles/resource-manager-template-walkthrough/) that provides one-click deployment of the entire solution.  
+In this tutorial, we highlight how to build a scalable machine learning-based data processing pipeline using [Microsoft R Server](https://www.microsoft.com/en-us/cloud-platform/r-server) with [Apache Spark](https://spark.apache.org/) utilizing [Azure Data Factory](https://azure.microsoft.com/en-us/documentation/articles/data-factory-introduction/) (ADF).  We provide step-by-step instructions and a customizable [Azure Resource Manager template](https://azure.microsoft.com/en-us/documentation/articles/resource-manager-template-walkthrough/) that provides one-click deployment of the entire solution.  
  
 A data pipeline with Microsoft R Server makes sense when one uses R for processing large datasets at regular intervals. For e.g., running a stock market analysis model at the end of each business day or re-training/updating the predictive models every hour based on the new incoming labeled data. If there is a need for an ETL (Extraction, Transformation, and Load) step before the data reaches R, such an ETL step can also be added to the same pipeline as a dependency to the R task. This removes the need for synchronization as R task will wait on the dependencies to finish.
  
-As an example dataset for this post, we use open source data, [NYC Taxi Dataset](http://www.andresmh.com/nyctaxitrips), public NYC Taxi Trip and Fare data-set. This dataset contains details on each taxi trip including pick-up/drop-off location, fare, tip paid, etc. Using this data, we want to train a predictive model to predict the tip amount at the beginning of each ride. In the case of NY taxi, newer trip and fare data is generated every day and we want to regularly update our predictive model to incorporate the latest trends. We will build a pipeline that periodically reads the new data and runs it through R to create a new and updated predictive model. We also create a batch scoring pipeline that uses the model created during the training and predicts the outcome (tip amount) over previously unseen data.  
+As an example dataset for this tutorial, we use open source data, [NYC Taxi Dataset](http://www.andresmh.com/nyctaxitrips), public NYC Taxi Trip and Fare data-set. This dataset contains details on each taxi trip including pick-up/drop-off location, fare, tip paid, etc. Using this data, we want to train a predictive model to predict the tip amount at the beginning of each ride. In the case of NY taxi, newer trip and fare data is generated every day and we want to regularly update our predictive model to incorporate the latest trends. We will build a pipeline that periodically reads the new data and runs it through R to create a new and updated predictive model. We also create a batch scoring pipeline that uses the model created during the training and predicts the outcome (tip amount) over previously unseen data.  
  
-The post emphasizes on how we can build a pipeline using Azure Data factory with Microsoft R over Apache Spark to schedule data processing jobs. We want to give readers a usable example that can be modified for their datasets and use-cases. For the sake of simplicity, we have skipped tuning and validation of our machine learning model.  
+This tutorial walk-through emphasizes on how we can build a pipeline using Azure Data factory with Microsoft R over Apache Spark to schedule data processing jobs. We want to give readers a usable example that can be modified for their datasets and use-cases. For the sake of simplicity, we have skipped tuning and validation of our machine learning model.  
  
-By the end of this post we want readers to be confident in:
+By the end of this tutorial we want readers to be confident in:
  
 1.	Utilizing Microsoft R and Spark cluster using Azure Data Factory (ADF) (with Azure Resource Templates) 
 2.	Setting up custom R jobs using the ADF
@@ -46,7 +46,7 @@ It's also possible to deploy templates through [Azure portal](https://azure.micr
 
     a.  Create a [storage account](https://azure.microsoft.com/en-us/documentation/articles/storage-create-storage-account/) in Azure via Azure portal within a new Resource Group. We will create the cluster in this resource group. We will use this Resource Group later when deploying the arm template. Select a location that supports all the resources needed - storage, and HDI cluster. "South Central US" is one such location that has all the resources.   General purpose Standard storage container with LRS replication is suitable for this work 
     
-    b.  Create a Blob container in this storage account. We will copy dataset to this container and later attach this container to the R/Spark cluster
+    b.  Create a Blob container in this storage account (Overview->Service-Blob-> + Container) . We will copy dataset to this container and later attach this container to the R/Spark cluster. 
    
     c.  Note the Storage Account Name and Access Keys from the portal after account creation
    
@@ -54,16 +54,16 @@ It's also possible to deploy templates through [Azure portal](https://azure.micr
    
     e.  [Attach](https://azure.microsoft.com/en-us/documentation/articles/vs-azure-tools-storage-manage-with-storage-explorer/#attach-or-detach-an-external-storage-account) the Storage Account to Storage Explorer using the Name and Access Keys obtained in Step 3c 
    
-    f.  Attach the public account using Shared Access Signature(SAS) URI to Azure Storage Explorer using this URI: https://dataforadfmrsdemo.blob.core.windows.net/demofiles?st=2016-09-08T18%3A17%3A00Z&se=2030-09-09T18%3A17%3A00Z&sp=rl&sv=2015-04-05&sr=c&sig=CAk9%2Bwe6pne%2BUoVmQbXv54ULYo1X9EaLsmf3vFZmV%2BY%3D
+    f.  [Attach](https://azure.microsoft.com/en-us/documentation/articles/vs-azure-tools-storage-manage-with-storage-explorer/#attach-service-using-sas) the public account, contains pre-processed input dataset and scripts, using Shared Access Signature(SAS) URI to Azure Storage Explorer using this URI: https://dataforadfmrsdemo.blob.core.windows.net/demofiles?st=2016-09-08T18%3A17%3A00Z&se=2030-09-09T18%3A17%3A00Z&sp=rl&sv=2015-04-05&sr=c&sig=CAk9%2Bwe6pne%2BUoVmQbXv54ULYo1X9EaLsmf3vFZmV%2BY%3D . 
    
-    g.  Download the 'data' and 'script' folders from the SAS attached blob container - 'Demofiles' 
+    g.  Download the `data` and `script` folders from the SAS attached blob container - `Demofiles` 
    
     h.  Upload these files to the private container created in Step 3b
 
 4.	Download [ADF-Rserver-apache-spark-pipeline.template.json](ADF-Rserver-apache-spark-pipeline.template.json) and [ADF-Rserver-apache-spark-pipeline.parameters.json](ADF-Rserver-apache-spark-pipeline.parameters.json) .  The first file is the Azure Resource Management template file that contains information on the resources and the constraints. The second file is a parameter file that contains all the configuration parameters including passwords and keys. Edit this parameter file and replace 'parameterStorageAccountName', 'parameterStorageAccountAccessKey', and 'parameterStorageContainerName' with the values from the newly created storage account. We also strongly recommend changing the passwords (10 characters long with at least a digit, a special character, a lower-case alphabet, and an upper-case alphabet).  
 
 
-# Starting the pipeline:
+# Starting the pipeline
  
 Azure allows deploying resources and configurations through [Azure Resource Management templates](https://azure.microsoft.com/en-us/documentation/articles/resource-manager-template-walkthrough/). We will show steps for  template based deployment. The template will start the HDInsight’s Spark Cluster, install Microsoft R server, and finally create Azure data factory. Once the resource deployment is complete, the pipeline will start running based on the temporal configurations (currently set to once a month). The advantage of template deployment is speed of deployment and repeatability. For our current scenario, we store the configuration parameters such as the ssh username/password, in a separate parameter file that is passed along with the template for deployment. Below are the steps for deploying the template using Windows PowerShell and what to expect after deployment. 
 
@@ -85,12 +85,12 @@ Azure allows deploying resources and configurations through [Azure Resource Mana
 4.	Using the Resource Group name used for creating the Storage Account, deploy the arm template. The 'NameForTheDeployment' can be any string to identify the deployment
 
     **New-AzureRmResourceGroupDeployment -Name ```<NameForTheDeployment>``` -ResourceGroupName ```<ResourceGroupName>``` -TemplateFile  .\ADF-Rserver-apache-spark-pipeline.template.json -TemplateParameterFile .\ADF-Rserver-apache-spark-pipeline.parameters.json**
-5.	In case of error, you can debug the above command by running it again with '-Debug' switch
+5.	This deployment step will take approximately 40 minutes. In case of an error, you can debug the above command by running it again with '-Debug' switch
 
 6.	If everything goes well then go to the [Azure Portal](https://portal.azure.com), find the resource group and check the status of ADF pipelines
 
 
-## Expectations:
+## Expectations and further steps
 1.	Check the pipeline run in the diagram view
 
     a.	Find the Data Factory pipeline and click on the `Diagram` view. You should be able to see two pipelines (training and scoring) with input and output datasets.
@@ -107,10 +107,10 @@ Azure allows deploying resources and configurations through [Azure Resource Mana
 
     b. To start the scoring pipeline, we need to change a config parameter for that pipeline through [portal](https://portal.azure.com). Find the Data Factory that we created earlier and click - `Author and Deploy`, then expand `Pipelines` and click on `datafactoryscoring` pipeline. Towards the bottom, there is a key - `isPaused`, change the value for this key from `true` to `false`. Now click on `Deploy` button to activate these changes.
 
-    c. Now go back to the `Diagram` view and click the `finalOutputDatasetScoring` dataset, check the runs, if they have still not started, you can manually start the run (generally it take a moment before the pipeline starts). Now once the run is complete, similar to the training pipeline, one can check the 
+    c. Now go back to the `Diagram` view and click the `finalOutputDatasetScoring` dataset, check the runs, if they have still not started, you can manually start the run (generally it take a moment before the pipeline starts). Now once the run is complete, similar to the training pipeline, one can check the status of the pipeline run.
 
 
-## Sequnce of steps in the R script for training 
+## Sequence of steps in the R script for training 
 
 Following sequence of steps happens while running the training  R script:
 
@@ -122,9 +122,9 @@ Following sequence of steps happens while running the training  R script:
 
 
 # Customizing the pipeline
- It’s possible to customize the template used in this post and apply it to other problems. There are three main parts that can be configured as per requirements: Cluster Configuration, R code that is used for the analysis, and the Data Factory setup.  Below we will give a high level idea on customizing each of these.
+ It’s possible to customize the template used in this tutorial and apply it to other problems. There are three main parts that can be configured as per requirements: Cluster Configuration, R code that is used for the analysis, and the Data Factory setup.  Below we will give a high level idea on customizing each of these.
  
-*	Cluster Configuration: We are using only two worker nodes of the D3_V2 types. For the jobs that require more memory or processing power, one can create more worker nodes and/or use more powerful machines. Changes in the cluster configuration should also be reflected in the R script when setting the compute context to allow for efficient resource utilization.  This post talks about Spark tuning with Microsoft R: https://blogs.msdn.microsoft.com/azuredatalake/2016/08/09/rapid-big-data-prototyping-with-microsoft-r-server-on-apache-spark-context-switching-spark-tuning/
+*	Cluster Configuration: We are using only two worker nodes of the D3_V2 types. For the jobs that require more memory or processing power, one can create more worker nodes and/or use more [powerful machines](https://azure.microsoft.com/en-us/documentation/articles/virtual-machines-windows-sizes/). Changes in the cluster configuration should also be reflected in the R script when setting the compute context to allow for efficient resource utilization.  This [tutorial](https://blogs.msdn.microsoft.com/azuredatalake/2016/08/09/rapid-big-data-prototyping-with-microsoft-r-server-on-apache-spark-context-switching-spark-tuning/) talks about Spark tuning with Microsoft R.
 ```    
 {
  		"name": "workernode",
@@ -164,7 +164,7 @@ Following sequence of steps happens while running the training  R script:
                                 },
 ```
 
-*Figure 3.* A code snippet from the ARM template showing activity that runs the R script. The name of the script is stored in the variable – ‘rscript-name’. ‘/data/nyc_taxi_joined_csv/’ and ‘/output/model/’ are the arguments to the rscript   The script is run using batch mode provided by R. Note that we use command ‘Revo64’ instead of ‘R’ as we are referring to the R server provided by Microsoft.  
+*Figure 3.* A code snippet from the ARM template showing activity that runs the R script. The name of the script is stored in the variable – ‘rscript-name’. ‘/data/nyc_taxi_joined_csv/’ and ‘/output/model/’ are the arguments to the R script.   The script is run using batch mode provided by R. Note that we use command ‘Revo64’ instead of ‘R’ as we are referring to the R server provided by Microsoft.  
 
 
 *	Data Factory: Currently the data factory is scheduled to run once a month; one can change that as per the requirements. We are currently having static dataset, but it can be changed to something where new data made accessible to the pipeline. ADF has support for reading partitions defined by time periods. ADF can also utilize data from different sources (including blob storage, databases, etc.).  One can add more activities (such as ETL in Apache Spark) to the pipeline or even create more pipelines. Documentation on [ADF](
@@ -197,5 +197,5 @@ https://azure.microsoft.com/en-us/documentation/services/data-factory/) has more
 
 # Conclusion
  
-This post highlights how Microsoft R Server with Spark can be used in production data pipelines for end-to-end data processing and machine-learning jobs. Integration of Microsoft R with Azure Data factory opens the rich world of open source R packages and brings in the scalability offered by Microsoft R to a controlled and monitored production data pipeline (ADF). Along with the steps we also provide an easily customizable Azure Resource Manager template that allows one-click deployment of the resources (Microsoft R server, Apache Spark, Azure Data Factory).  
+This tutorial highlights how Microsoft R Server with Spark can be used in production data pipelines for end-to-end data processing and machine-learning jobs. Integration of Microsoft R with Azure Data factory opens the rich world of open source R packages and brings in the scalability offered by Microsoft R to a controlled and monitored production data pipeline (ADF). Along with the steps we also provide an easily customizable Azure Resource Manager template that allows one-click deployment of the resources (Microsoft R server, Apache Spark, Azure Data Factory).  
 
