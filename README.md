@@ -50,24 +50,32 @@ It's also possible to deploy templates through [Azure portal](https://azure.micr
      b. Login to Azure using PowerShell 
 
        ```csharp
-       Login-AzureRmAccount
+       > Login-AzureRmAccount
        ```
 
      c. List all available subscription
 
-       **Get-AzureRmSubscription**
+       ```csharp
+       > Get-AzureRmSubscription
+       ```
 
      d. Select an Azure subscription to run this tutorial
      
-       **Select-AzureRmSubscription  -SubscriptionId ```<Subscription ID>```**
+       ```csharp
+        > Select-AzureRmSubscription  -SubscriptionId <Subscription ID>
+       ```
 
     e. Create a Resource Group. Resouce group name can be any string. Use this same Resource Group Name throughout the tutorial. Location too can be modifed dependent on the resource availability. We have selected `South Central US` 
        
-       **New-AzureRmResourceGroup -Name ```<ResourceGroupName>``` -Location "South Central US"**
+       ```csharp
+        > New-AzureRmResourceGroup -Name <ResourceGroupName> -Location "South Central US"
+       ```
 
     f. Deploy the Data copying ARM template that will create the storage account and  copy dataset from public repo to this storage Account
        
-       **New-AzureRmResourceGroupDeployment -Name <deploymentName> -ResourceGroupName <ResourceGroupName> -TemplateFile .\Storage-account-data-copy-setup.template.json**
+      ```csharp
+       > New-AzureRmResourceGroupDeployment -Name <deploymentName> -ResourceGroupName <ResourceGroupName> -TemplateFile .\Storage-account-data-copy-setup.template.json
+      ```
 
     g. After a successful deployment, storage account name - `parameterStorageAccountName`, storage account keys - `parameterStorageAccountKey` and the container name - `parameterStorageContainerName` will be printed as output. For the deployment of the training/scoring pipelines, we will use these values to connect the downloaded dataset with R/Spark cluster.          
 
