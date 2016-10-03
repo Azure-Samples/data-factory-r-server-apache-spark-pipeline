@@ -179,7 +179,7 @@ Following sequence of steps happens while running the training  R script:
  
 
 
-*	R script: One can replace/modify the R scripts too, for example in the training pipeline, we run `RScriptForNYCTaxi.R`. This script is kept in the script folder among the files that were copied from the public repository.  For changing the name of the script file or modifying the arguments, changes must be edited in the `ADF-Rserver-apache-spark-pipeline.template.json` in the Data Pipeline section. Figure 2 shows the relevant section from the ARM template.
+*	R script: One can replace/modify the R scripts too, for example the training pipeline runs the script in file `RScriptForNYCTaxi.R`. This R script is kept in the script folder among the files that were copied from the public repository. This script's name is stored in the template variable - `rscript-name`.  Editing the value for this variable will allow running a different script. The modifications to the arguments must be made in the Data Pipeline section of [ADF-Rserver-apache-spark-pipeline.template.json](ADF-Rserver-apache-spark-pipeline.template.json). Figure 2 shows the relevant section from the ARM template.
 
 ```
 "activities": [
