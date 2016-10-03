@@ -1,3 +1,8 @@
+---
+services: data-factory, r-server, hdinsight
+platforms: R, Python
+author: indolent
+---
  
 ![Title Image](images/pipelineImage.PNG)
 
