@@ -49,7 +49,9 @@ It's also possible to deploy templates through [Azure portal](https://azure.micr
      
      b. Login to Azure using PowerShell 
 
-       **Login-AzureRmAccount**
+       ```csharp
+       Login-AzureRmAccount
+       ```
 
      c. List all available subscription
 
