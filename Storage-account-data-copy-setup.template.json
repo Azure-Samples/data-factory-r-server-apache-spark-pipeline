@@ -1,0 +1,188 @@
+{
+    "contentVersion": "1.0.0.0",
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "parameters": {
+      
+    },
+    "variables": {
+        "dataFactoryName": "[concat('DataCopy',uniquestring(resourceGroup().id))]",
+        "containerName": "rspark",
+        "storageAccountForDataset": "dataforadfmrsdemo",
+        "publicFolderPath": "demofiles/",
+        "storageAccountName": "[concat('stgact',uniquestring(resourceGroup().id))]",
+        "apiVersion": "2015-10-01",
+        "storageLinkedServiceName": "AzureStorageLinkedService",
+        "publicStorageLinkedServiceName": "PublicDataSetAzureStorageLinkedService",
+        "blobInputPublicDataset": "AzureBlobInputPublic",
+        "blobOutputDataset": "AzureBlobOutput",
+        "defaultApiVersion": "2015-05-01-preview",
+        "clusterApiVersion": "2015-03-01-preview",
+        "publicStorageAccountSasURI": "https://dataforadfmrsdemo.blob.core.windows.net/demofiles?st=2016-08-23T18%3A04%3A00Z&se=2020-08-24T18%3A04%3A00Z&sp=rl&sv=2015-04-05&sr=c&sig=ZlGFdS5SusdmPGVsVGtAP9q8OhinwFidhZObdqi6y0M%3D"
+    },
+    "resources": [
+      
+        {
+            "name": "[variables('storageAccountName')]",
+            "type": "Microsoft.Storage/storageAccounts",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "[variables('defaultApiVersion')]",
+            "dependsOn": [],
+            "tags": {},
+            "properties": {
+                "accountType": "Standard_LRS"
+            }
+        },
+       
+        {
+            "name": "[variables('dataFactoryName')]",
+            "apiVersion": "[variables('apiVersion')]",
+            "type": "Microsoft.DataFactory/datafactories",
+            "location": "westus",
+            "resources": [
+                {
+                    "dependsOn": [
+                        "[concat('Microsoft.DataFactory/dataFactories/', variables('dataFactoryName'))]"
+                    ],
+                    "type": "linkedservices",
+                    "name": "[variables('storageLinkedServiceName')]",
+                    "apiVersion": "[variables('apiVersion')]",
+                    "properties": {
+                        "type": "AzureStorage",
+                        "typeProperties": {
+                            "connectionString": "[concat('DefaultEndpointsProtocol=https;AccountName=',variables('storageAccountName'),';AccountKey=',listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), variables('defaultApiVersion')).key1)]"
+                        }
+                    }
+                },
+                {
+                    "dependsOn": [
+                        "[concat('Microsoft.DataFactory/dataFactories/', variables('dataFactoryName'))]"
+                    ],
+                    "type": "linkedservices",
+                    "name": "[variables('publicStorageLinkedServiceName')]",
+                    "apiVersion": "[variables('apiVersion')]",
+                    "properties": {
+                        "type": "AzureStorageSas",
+                        "typeProperties": {
+                            "sasUri": "[variables('publicStorageAccountSasURI')]"
+                        }
+                    }
+                },
+                {
+                    "dependsOn": [
+                        "[concat('Microsoft.DataFactory/dataFactories/', variables('dataFactoryName'))]",
+                        "[concat('Microsoft.DataFactory/dataFactories/', variables('dataFactoryName'), '/linkedServices/', variables('publicStorageLinkedServiceName'))]"
+                    ],
+                    "type": "datasets",
+                    "name": "[variables('blobInputPublicDataset')]",
+                    "apiVersion": "[variables('apiVersion')]",
+                    "properties": {
+                        "type": "AzureBlob",
+                        "linkedServiceName": "[variables('publicStorageLinkedServiceName')]",
+                        "typeProperties": {
+                            "folderPath": "[variables('publicFolderPath')]"
+                        },
+                        "availability": {
+                            "frequency": "Month",
+                            "interval": 1
+                        },
+                        "external": true,
+                        "policy": {}
+                    }
+                },
+                {
+                    "dependsOn": [
+                        "[concat('Microsoft.DataFactory/dataFactories/', variables('dataFactoryName'))]",
+                        "[concat('Microsoft.DataFactory/dataFactories/', variables('dataFactoryName'), '/linkedServices/', variables('storageLinkedServiceName'))]"
+                    ],
+                    "type": "datasets",
+                    "name": "[variables('blobOutputDataset')]",
+                    "apiVersion": "[variables('apiVersion')]",
+                    "properties": {
+                        "published": false,
+                        "type": "AzureBlob",
+                        "linkedServiceName": "[variables('storageLinkedServiceName')]",
+                        "typeProperties": {
+                            "folderPath": "[concat(variables('containerName'),'/')]"
+                        },
+                        "availability": {
+                            "frequency": "Month",
+                            "interval": 1
+                        }
+                    }
+                },
+                {
+                    "dependsOn": [
+                        "[concat('Microsoft.DataFactory/dataFactories/', variables('dataFactoryName'))]",
+                        "[concat('Microsoft.DataFactory/dataFactories/', variables('dataFactoryName'), '/linkedServices/', variables('storageLinkedServiceName'))]",
+                        "[concat('Microsoft.DataFactory/dataFactories/', variables('dataFactoryName'), '/datasets/', variables('blobInputPublicDataset'))]",
+                        "[concat('Microsoft.DataFactory/dataFactories/', variables('dataFactoryName'), '/datasets/', variables('blobOutputDataset'))]"
+                    ],
+                    "type": "datapipelines",
+                    "name": "[variables('dataFactoryName')]",
+                    "apiVersion": "[variables('apiVersion')]",
+                    "properties": {
+                        "description": "My first Azure Data Factory pipeline",
+                        "activities": [
+                            {
+                                "type": "Copy",
+                                "typeProperties": {
+                                    "source": {
+                                        "type": "BlobSource",
+                                        "recursive": true
+                                    },
+                                    "sink": {
+                                        "type": "BlobSink",
+                                        "copyBehavior": "PreserveHierarchy",
+                                        "writeBatchSize": 0,
+                                        "writeBatchTimeout": "00:00:00"
+                                    }
+                                },
+                                "inputs": [
+                                    {
+                                        "name": "[variables('blobInputPublicDataset')]"
+                                    }
+                                ],
+                                "outputs": [
+                                    {
+                                        "name": "[variables('blobOutputDataset')]"
+                                    }
+                                ],
+                                "policy": {
+                                    "timeout": "02:00:00",
+                                    "concurrency": 1,
+                                    "executionPriorityOrder": "NewestFirst",
+                                    "style": "StartOfInterval",
+                                    "retry": 3,
+                                    "longRetry": 0,
+                                    "longRetryInterval": "00:00:00"
+                                },
+                                "scheduler": {
+                                    "frequency": "Month",
+                                    "interval": 1
+                                },
+                                "name": "CopyActivity-0"
+                            }
+                        ],
+                        "start": "2016-04-01T00:00:00Z",
+                        "end": "2016-04-02T00:00:00Z",
+                        "isPaused": false
+                    }
+                }
+            ]
+        }
+    ],
+    "outputs": {
+        "parameterStorageAccountName": {
+            "type": "string",
+            "value": "[variables('storageAccountName')]"
+        },
+        "paramerterStorageAccountKey": {
+            "type": "string",
+            "value": "[listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), variables('defaultApiVersion')).key1]"
+        },
+        "parameterStorageContainerName": {
+            "type": "string",
+            "value": "[variables('containerName')]"
+        }
+    }
+}

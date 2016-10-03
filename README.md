@@ -1,4 +1,4 @@
-
+ 
 ![Title Image](images/pipelineImage.PNG)
 
 # Introduction
@@ -14,7 +14,7 @@ By the end of this tutorial we want readers to be confident in:
  
 1.	Utilizing Microsoft R and Spark cluster using Azure Data Factory (ADF) (with Azure Resource Templates) 
 2.	Setting up custom R jobs using the ADF
-3.	Manage the data movements when using Microsoft R with Spark
+3.	Managing the data movements when using Microsoft R with Spark
 
 
 # Background 
@@ -37,30 +37,41 @@ The 2013 [NYC dataset](http://www.andresmh.com/nyctaxitrips) in the available fo
 In the following sections, we provide steps to create an ADF pipeline with Microsoft R to for generating a machine learning model on the NYC taxi dataset.  
 
 
-
 # Setup
+
 1.	Create an [Azure account](https://azure.microsoft.com/en-us/) (Skip if already have an azure account)
 2.	Setup any one of [several available template deployment methods](https://azure.microsoft.com/en-us/documentation/articles/resource-group-template-deploy/). 
-It's also possible to deploy templates through [Azure portal](https://azure.microsoft.com/en-us/documentation/articles/resource-group-template-deploy-portal/#deploy-resources-from-custom-template), minimizing the setup time. We use PowerShell based deployment through this blog.
-3.	Before starting the pipeline, we must make the dataset available to the R-server/Spark cluster. Every Spark Cluster on Azure is associated with at least one storage account. Below are the steps on how to create a Storage Account and then make the dataset/scripts available on this storage account.
+It's also possible to deploy templates through [Azure portal](https://azure.microsoft.com/en-us/documentation/articles/resource-group-template-deploy-portal/#deploy-resources-from-custom-template), minimizing the setup time. We use Azure [PowerShell](https://azure.microsoft.com/en-us/documentation/articles/powershell-install-configure/) based deployment through this blog.
 
-    a.  Create a [storage account](https://azure.microsoft.com/en-us/documentation/articles/storage-create-storage-account/) in Azure via Azure portal within a new Resource Group. We will create the cluster in this resource group. We will use this Resource Group later when deploying the arm template. Select a location that supports all the resources needed - storage, and HDI cluster. "South Central US" is one such location that has all the resources.   General purpose Standard storage container with LRS replication is suitable for this work 
-    
-    b.  Create a Blob container in this storage account (Overview->Service-Blob-> + Container) . We will copy dataset to this container and later attach this container to the R/Spark cluster. 
-   
-    c.  Note the Storage Account Name and Access Keys from the portal after account creation
-   
-    d.  Install [Azure Storage Explorer](https://azure.microsoft.com/en-us/documentation/articles/vs-azure-tools-storage-manage-with-storage-explorer/)
-   
-    e.  [Attach](https://azure.microsoft.com/en-us/documentation/articles/vs-azure-tools-storage-manage-with-storage-explorer/#attach-or-detach-an-external-storage-account) the Storage Account to Storage Explorer using the Name and Access Keys obtained in Step 3c 
-   
-    f.  [Attach](https://azure.microsoft.com/en-us/documentation/articles/vs-azure-tools-storage-manage-with-storage-explorer/#attach-service-using-sas) the public account, contains pre-processed input dataset and scripts, using Shared Access Signature(SAS) URI to Azure Storage Explorer using this URI: https://dataforadfmrsdemo.blob.core.windows.net/demofiles?st=2016-09-08T18%3A17%3A00Z&se=2030-09-09T18%3A17%3A00Z&sp=rl&sv=2015-04-05&sr=c&sig=CAk9%2Bwe6pne%2BUoVmQbXv54ULYo1X9EaLsmf3vFZmV%2BY%3D . 
-   
-    g.  Download the `data` and `script` folders from the SAS attached blob container - `Demofiles` 
-   
-    h.  Upload these files to the private container created in Step 3b
+3.	Before starting the pipeline, we must make the dataset available to the R-server/Spark cluster. Every Spark Cluster on Azure is associated with at least one storage account. Below are the steps using Azure [PowerShell](https://azure.microsoft.com/en-us/documentation/articles/powershell-install-configure/) on how to create a Storage Account and then make the dataset/scripts available on this storage account.
 
-4.	Download [ADF-Rserver-apache-spark-pipeline.template.json](ADF-Rserver-apache-spark-pipeline.template.json) and [ADF-Rserver-apache-spark-pipeline.parameters.json](ADF-Rserver-apache-spark-pipeline.parameters.json) .  The first file is the Azure Resource Management template file that contains information on the resources and the constraints. The second file is a parameter file that contains all the configuration parameters including passwords and keys. Edit this parameter file and replace 'parameterStorageAccountName', 'parameterStorageAccountAccessKey', and 'parameterStorageContainerName' with the values from the newly created storage account. We also strongly recommend changing the passwords (10 characters long with at least a digit, a special character, a lower-case alphabet, and an upper-case alphabet).  
+     a. Download the template [Storage-account-data-copy-setup.template.json](Storage-account-data-copy-setup.template.json). After deployment, this template will create a new storage account and copy data to this storage account using copy functionality of Azure Data Factory (ADF). Once downloaded, navigate to template's location using PowerShell to begin its deplyoment 
+     
+     b. Login to Azure using PowerShell 
+
+       **Login-AzureRmAccount**
+
+     c. List all available subscription
+
+       **Get-AzureRmSubscription**
+
+     d. Select an Azure subscription to run this tutorial
+     
+       **Select-AzureRmSubscription  -SubscriptionId ```<Subscription ID>```**
+
+    e. Create a Resource Group. Resouce group name can be any string. Use this same Resource Group Name throughout the tutorial. Location too can be modifed dependent on the resource availability. We have selected `South Central US` 
+       
+       **New-AzureRmResourceGroup -Name ```<ResourceGroupName>``` -Location "South Central US"**
+
+    f. Deploy the Data copying ARM template that will create the storage account and  copy dataset from public repo to this storage Account
+       
+       **New-AzureRmResourceGroupDeployment -Name <deploymentName> -ResourceGroupName <ResourceGroupName> -TemplateFile .\Storage-account-data-copy-setup.template.json**
+
+    g. After a successful deployment, storage account name - `parameterStorageAccountName`, storage account keys - `parameterStorageAccountKey` and the container name - `parameterStorageContainerName` will be printed as output. For the deployment of the training/scoring pipelines, we will use these values to connect the downloaded dataset with R/Spark cluster.          
+
+
+4.	Download [ADF-Rserver-apache-spark-pipeline.template.json](ADF-Rserver-apache-spark-pipeline.template.json) and [ADF-Rserver-apache-spark-pipeline.parameters.json](ADF-Rserver-apache-spark-pipeline.parameters.json) .  The first file is the Azure Resource Management template file that contains information on the resources and the constraints. The second file is a parameter file that contains all the configuration parameters including passwords and keys. Edit this parameter file and replace `parameterStorageAccountName`, `parameterStorageAccountAccessKey`, and `parameterStorageContainerName` with the values from step 3g. We also strongly recommend changing the passwords (10 characters long with at least a digit, a special character, a lower-case alphabet, and an upper-case alphabet).  
+
 
 
 # Starting the pipeline
@@ -79,19 +90,20 @@ Azure allows deploying resources and configurations through [Azure Resource Mana
 
     **Get-AzureRmSubscription**
 
-3.	Select an Azure subscription
+3. Select an Azure subscription
 
     **Select-AzureRmSubscription  -SubscriptionId ```<Subscription ID>```**
-4.	Using the Resource Group name used for creating the Storage Account, deploy the arm template. The 'NameForTheDeployment' can be any string to identify the deployment
+    
+4. Using the Resource Group name used for creating the Storage Account in the *Setup* section, deploy the arm template. The 'NameForTheDeployment' can be any string to identify the deployment
 
     **New-AzureRmResourceGroupDeployment -Name ```<NameForTheDeployment>``` -ResourceGroupName ```<ResourceGroupName>``` -TemplateFile  .\ADF-Rserver-apache-spark-pipeline.template.json -TemplateParameterFile .\ADF-Rserver-apache-spark-pipeline.parameters.json**
-5.	This deployment step will take approximately 40 minutes. In case of an error, you can debug the above command by running it again with '-Debug' switch
+5. This deployment step will take approximately 40 minutes. In case of an error, you can debug the above command by running it again with '-Debug' switch
 
-6.	If everything goes well then go to the [Azure Portal](https://portal.azure.com), find the resource group and check the status of ADF pipelines
+6. If everything goes well then go to the [Azure Portal](https://portal.azure.com), find the resource group and check the status of ADF pipelines
 
 
 ## Expectations and further steps
-1.	Check the pipeline run in the diagram view
+1. Check the pipeline run in the diagram view
 
     a.	Find the Data Factory pipeline and click on the `Diagram` view. You should be able to see two pipelines (training and scoring) with input and output datasets.
     
