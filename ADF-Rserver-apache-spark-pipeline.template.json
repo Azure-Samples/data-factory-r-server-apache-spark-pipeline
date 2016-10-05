@@ -65,7 +65,7 @@
         "defaultApiVersion": "2015-05-01-preview",
         "finalOutputDataset": "finalOutputDatasetTraining",
         "finalOutputDatasetScoring": "finalOutputDatasetScoring",
-        "hdInsightOnDemandLinkedServiceName": "HDInsightOnDemandLinkedService",
+        "hdInsightLinkedServiceName": "HDInsightLinkedService",
         "publicStorageLinkedServiceName": "PublicDataSetAzureStorageLinkedService",
         "rscript-name": "RScriptForNYCTaxi.R",
         "rscript-name-scoring": "RScriptForNYCTaxiScoring.R",
@@ -191,7 +191,7 @@
                         "[concat('Microsoft.HDInsight/clusters/',variables('clusterName'),'/applications/R-Server')]"
                     ],
                     "type": "linkedservices",
-                    "name": "[variables('hdInsightOnDemandLinkedServiceName')]",
+                    "name": "[variables('hdInsightLinkedServiceName')]",
                     "apiVersion": "[variables('apiVersion')]",
                     "properties": {
                         "type": "HDInsight",
@@ -293,7 +293,7 @@
                     "dependsOn": [
                         "[concat('Microsoft.DataFactory/dataFactories/', variables('dataFactoryName'))]",
                         "[concat('Microsoft.DataFactory/dataFactories/', variables('dataFactoryName'), '/linkedServices/', variables('storageLinkedServiceName'))]",
-                        "[concat('Microsoft.DataFactory/dataFactories/', variables('dataFactoryName'), '/linkedServices/', variables('hdInsightOnDemandLinkedServiceName'))]",
+                        "[concat('Microsoft.DataFactory/dataFactories/', variables('dataFactoryName'), '/linkedServices/', variables('hdInsightLinkedServiceName'))]",
                         "[concat('Microsoft.DataFactory/dataFactories/', variables('dataFactoryName'), '/datasets/', variables('blobInputDataset'))]"
                     ],
                     "type": "datapipelines",
@@ -336,7 +336,7 @@
                                 },
                                 "name": "HDInsight Job Launcher",
                                 "description": "Submits a general HDInsight Job",
-                                "linkedServiceName": "[variables('hdInsightOnDemandLinkedServiceName')]"
+                                "linkedServiceName": "[variables('hdInsightLinkedServiceName')]"
                             }
                         ],
                         "start": "2016-04-01T00:00:00Z",
@@ -347,7 +347,7 @@
                     "dependsOn": [
                         "[concat('Microsoft.DataFactory/dataFactories/', variables('dataFactoryName'))]",
                         "[concat('Microsoft.DataFactory/dataFactories/', variables('dataFactoryName'), '/linkedServices/', variables('storageLinkedServiceName'))]",
-                        "[concat('Microsoft.DataFactory/dataFactories/', variables('dataFactoryName'), '/linkedServices/', variables('hdInsightOnDemandLinkedServiceName'))]",
+                        "[concat('Microsoft.DataFactory/dataFactories/', variables('dataFactoryName'), '/linkedServices/', variables('hdInsightLinkedServiceName'))]",
                         "[concat('Microsoft.DataFactory/dataFactories/', variables('dataFactoryName'), '/datasets/', variables('blobInputDataset'))]"
                     ],
                     "type": "datapipelines",
@@ -390,7 +390,7 @@
                                 },
                                 "name": "HDInsight Job Launcher",
                                 "description": "Submits a general HDInsight Job",
-                                "linkedServiceName": "[variables('hdInsightOnDemandLinkedServiceName')]"
+                                "linkedServiceName": "[variables('hdInsightLinkedServiceName')]"
                             }
                         ],
                         "start": "2016-04-01T00:00:00Z",
