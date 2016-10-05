@@ -6,7 +6,7 @@ author: udayankumar
 
 ![Title Image](images/pipelineImage.PNG)
 
-# Introduction
+# Building Data Pipelines with Microsoft R Server and Azure Data Factory 
 In this tutorial, we highlight how to build a scalable machine learning-based data processing pipeline using [Microsoft R Server](https://www.microsoft.com/en-us/cloud-platform/r-server) with [Apache Spark](https://spark.apache.org/) utilizing [Azure Data Factory](https://azure.microsoft.com/en-us/documentation/articles/data-factory-introduction/) (ADF).  Here, we provide step-by-step instructions and a customizable [Azure Resource Manager template](https://azure.microsoft.com/en-us/documentation/articles/resource-manager-template-walkthrough/) that provides deployment of the entire solution.  
  
 A data pipeline with Microsoft R Server makes sense when one uses R for processing large datasets at regular intervals. For e.g., running a stock market analysis model at the end of each business day or re-training/updating the predictive models every hour based on the newly incoming labeled data. If there is a need for an ETL (Extraction, Transformation, and Load) step before the data reaches R, such an ETL step can also be added to the same pipeline as a dependency to the R analytics process. This removes the need for synchronization as R task will wait on the dependencies to finish.
