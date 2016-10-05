@@ -146,6 +146,7 @@ Azure allows deploying resources and configurations through [Azure Resource Mana
 
     c. Now go back to the `Diagram` view and click the `finalOutputDatasetScoring` dataset, check the runs, if they have still not started, you can manually start the run (generally it take a moment before the pipeline starts). Now once the run is complete, similar to the training pipeline, one can check the status of the pipeline run.
 
+    d. If the status is `Succeeded`, then the attached storage container has a blob folder named 'scoringOutput'. This file contains the output (tip amount) prediction for the scoring dataset in csv format. 
 
 ## Sequence of steps in the R script for training 
 

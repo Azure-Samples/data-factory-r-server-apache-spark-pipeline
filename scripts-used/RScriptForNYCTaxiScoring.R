@@ -56,9 +56,8 @@ load(localModelFileWithPath)
 
 xdfOutFile       <- file.path(filePrefix, "nyctaxixdf")
 taxiSplitXdfFile <- file.path(filePrefix, "taxiSplitXdf")
-taxiTrainXdfFile <- file.path(filePrefix, "taxiTrainXdf")
 taxiTestXdfFile  <- file.path(filePrefix, "taxiTestXdf")
-stackSplitXdf <- RxXdfData(file = outputFile, fileSystem = hdfsFS);
+taxiTestSplitXdf <- RxXdfData(file = taxiTestXdfFile, fileSystem = hdfsFS);
 
 
 varsToDrop = c("medallion", "hack_license","store_and_fwd_flag",
@@ -122,10 +121,12 @@ rxDataStep(inData = taxiDSXdf, outFile = taxiSplitXdf,
 # run the training model
 
 pt1 <- proc.time()
-#rxPredict(model, data =taxiSplitXdf, outData=stackSplitXdf, checkFactorLevels=FALSE )
-rxPredict(model, data =taxiSplitXdf,checkFactorLevels=FALSE )
+rxPredict(model, data =taxiSplitXdf, outData=taxiTestSplitXdf, overwrite = TRUE, checkFactorLevels=FALSE )
+
 
 pt2 <- proc.time()
 runtime <- pt2-pt1; 
 print (runtime/60)
+outputDS <- RxTextData(outputFile, missingValueString = "", firstRowIsColNames = FALSE, quoteMark = "", fileSystem = hdfsFS)
+rxDataStep(inData = taxiTestSplitXdf, outFile = outputDS, overwrite = TRUE)
 
