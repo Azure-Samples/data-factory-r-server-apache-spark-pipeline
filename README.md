@@ -1,4 +1,9 @@
- 
+--- 
+services: data-factory, r-server, hdinsight
+platforms: R, Python 
+author: udayankumar
+---
+
 ![Title Image](images/pipelineImage.PNG)
 
 # Introduction
