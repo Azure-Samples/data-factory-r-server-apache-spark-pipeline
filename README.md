@@ -1,6 +1,6 @@
 --- 
 services: data-factory, r-server, hdinsight
-platforms: R, Python 
+platforms: R
 author: udayankumar
 ---
 
